@@ -1,0 +1,442 @@
+#-------Load data####
+library(foreign)
+bio2018<-read.spss("bioCEED Student Survey 2018.sav", use.value.labels = FALSE, to.data.frame = TRUE)
+
+#-------Data preparation####
+options(scipen = 999)
+
+#-------Descriptives and overview####
+library(psych)
+library(memisc)
+library(car)
+
+View(bio2018)
+str(bio2018)
+summary(bio2018$Grades)
+
+#Recode for analyses for Age
+bio2018$Alder2 = factor(bio2018$Alder, labels = c("Below 20", "21-25", "26-30", "31-35", "Above 35")) 
+table(bio2018$Alder)
+table(bio2018$Alder2)
+percent(bio2018$Alder)
+percent(bio2018$Alder2)
+describe(bio2018$Alder)
+
+#Recode for analyses for Gender
+bio2018$Gender2 <- Recode(bio2018$Gender, "1= 1; 2= 0" 
+                          , as.numeric=T) 
+table(bio2018$Gender)
+table(bio2018$Gender2)
+
+#Create labels for the recoded Gender variable
+bio2018$Gender2 = factor(bio2018$Gender2, labels = c("Females", "Males")) #Females=0, Males=1
+table(bio2018$Gender2)
+
+percent(bio2018$Gender2)
+percent(bio2018$Grades)
+
+#Recode for analyses for BSc/MSc
+bio2018$level_university <- Recode(bio2018$Study_level, "1:2='Bachelor'; 3:4='Master'", 
+                                   as.factor=T)
+
+bio2018$level_uni <- Recode(bio2018$Study_level, "1:2= 0; 3:4= 1", as.numeric=T) #0=Bachelor, 1=Master
+bio2018$level_uni = factor(bio2018$level_uni, labels = c("Bachelor", "Master")) #0=Bachelor, 1=Master
+
+table(bio2018$Study_level)
+table(bio2018$level_university)
+table(bio2018$level_uni)
+percent(bio2018$level_university)
+
+#-------Alpha####
+install.packages("GPArotation")
+library(GPArotation)
+
+#--Autonomy support
+Autsup_alpha <- data.frame(bio2018$AS1, bio2018$AS2, bio2018$AS3, bio2018$AS4, bio2018$AS5, bio2018$AS6)
+alpha(Autsup_alpha) # raw alpha=0.90
+omega(Autsup_alpha) #Omega_t=0.92
+
+#--Intrinsic aspiration
+IA_alpha <- data.frame(bio2018$IA1, bio2018$IA2, bio2018$IA3)
+alpha(IA_alpha) # raw alpha=0.90
+omega(IA_alpha) #Omega_t=0.90
+
+#--Extrinsic aspiration
+EA_alpha <- data.frame(bio2018$EA1, bio2018$EA2, bio2018$EA3)
+alpha(EA_alpha) # raw alpha=0.82
+omega(EA_alpha) #Omega_t=0.83
+
+#--Perceived competence
+PerCom_alpha<-data.frame(bio2018$PC1,bio2018$PC2, bio2018$PC3, bio2018$PC4)
+alpha(PerCom_alpha) # raw alpha=0.92
+omega(PerCom_alpha) #Omega_t=0.94
+
+#--Autonomous motivation
+autmot_alpha <- data.frame(bio2018$Aut1, bio2018$Aut2, bio2018$Aut3, bio2018$Aut4, bio2018$Aut5, bio2018$Aut6)
+alpha(autmot_alpha) # raw alpha=.73
+omega(autmot_alpha) #Omega_t=0.82
+
+#--Autonomous motivation without indicator Aut4
+autmot_alpha2 <- data.frame(bio2018$Aut1, bio2018$Aut2, bio2018$Aut3, bio2018$Aut5, bio2018$Aut6)
+alpha(autmot_alpha2) # raw alpha=.75
+omega(autmot_alpha2) #Omega_t=0.80
+
+#--Controlled motivation
+conmot_alpha <- data.frame(bio2018$Con1, bio2018$Con2, bio2018$Con3, bio2018$Con4, bio2018$Con5, bio2018$Con6)
+alpha(conmot_alpha) # raw alpha=0.68
+omega(conmot_alpha) #Omega_t=0.80
+
+#--Subjective vitality
+vitality_alpha <- data.frame(bio2018$SVS1, bio2018$SVS2, bio2018$SVS3)
+alpha(vitality_alpha) # raw alpha=0.91
+omega(vitality_alpha) #Omega_t=0.92
+
+#--Dropout intentions
+dropout_alpha <- data.frame(bio2018$Intention1, bio2018$Intention2_REV, bio2018$Intention3)
+alpha(dropout_alpha) # raw alpha=0.67
+omega(dropout_alpha) #Omega_t=0.71
+
+#-------Creating scales and adding to dataset####
+library(multicon)
+
+#--Autonomy support
+AS_scale <- data.frame(bio2018$AS1, bio2018$AS2, bio2018$AS3, bio2018$AS4, bio2018$AS5, bio2018$AS6)
+bio2018$Aut_support <- aut_sup <- composite(AS_scale, R = NULL, Zitems = FALSE, maxScore = 7)
+
+#--Intrinsic aspiration
+IA_scale <- data.frame(bio2018$IA1, bio2018$IA2, bio2018$IA3)
+bio2018$Intrinsic_asp <- Ia_asp <- composite(IA_scale, R = NULL, Zitems = FALSE, maxScore = 7)
+
+#--Extrinsic aspiration
+EA_scale <- data.frame(bio2018$EA1, bio2018$EA2, bio2018$EA3)
+bio2018$Extrinsic_asp <- Ex_asp <- composite(EA_scale, R = NULL, Zitems = FALSE, maxScore = 7)
+
+#--Perceived competence
+PC_scale<-data.frame(bio2018$PC1,bio2018$PC2, bio2018$PC3, bio2018$PC4)
+bio2018$Perc_Comp <- perc_comp <- composite(PC_scale, R = NULL, Zitems = FALSE, maxScore = 7)
+
+#--Autonomous motivation
+autmot_scale <- data.frame(bio2018$Aut1, bio2018$Aut2, bio2018$Aut3, bio2018$Aut4, bio2018$Aut5, bio2018$Aut6)
+bio2018$Aut_motivation <- aut_mot <- composite(autmot_scale, R = NULL, Zitems = FALSE, maxScore = 7)
+
+#--Autonomous motivation without indicator Aut4
+autmot_scale2 <- data.frame(bio2018$Aut1, bio2018$Aut2, bio2018$Aut3, bio2018$Aut5, bio2018$Aut6)
+bio2018$Aut_motivation2 <- aut_mot2 <- composite(autmot_scale2, R = NULL, Zitems = FALSE, maxScore = 7)
+
+#--Controlled motivation
+conmot_scale <- data.frame(bio2018$Con1, bio2018$Con2, bio2018$Con3, bio2018$Con4, bio2018$Con5, bio2018$Con6)
+bio2018$Con_motivation <- con_mot <- composite(conmot_scale, R = NULL, Zitems = FALSE, maxScore = 7)
+
+#--Subjective vitality
+vitality_scale <- data.frame(bio2018$SVS1, bio2018$SVS2, bio2018$SVS3)
+bio2018$Sub_vitality <- vitality <- composite(vitality_scale, R = NULL, Zitems = FALSE, maxScore = 7)
+
+#--Dropout intentions
+dropout_scale<- data.frame(bio2018$Intention1, bio2018$Intention2_REV, bio2018$Intention3)
+bio2018$Dropout_int <- dropout <- composite(dropout_scale, R = NULL, Zitems = FALSE, maxScore = 7)
+
+#-------Analyses####
+
+#-Grades (testing if students who provided grades differ significantly from students who didnt provide grades on any of the study variables)
+bio2018$Grades2 <- Recode(bio2018$Grades, "1:6=1; NA=0"
+                          , as.numeric=T)
+table(bio2018$Grades2)
+bio2018$Grades2 = factor(bio2018$Grades2, labels = c("No_grades", "Grades")) #No grades=0, Grades=1
+table(bio2018$Grades2)
+
+#No significant difference between students who provided grades and who did not provide grades
+t.test(bio2018$Sub_vitality~bio2018$Grades2)
+t.test(bio2018$Dropout_int~bio2018$Grades2)
+t.test(bio2018$Perc_Comp~bio2018$Grades2) 
+t.test(bio2018$Aut_motivation~bio2018$Grades2)
+t.test(bio2018$Con_motivation~bio2018$Grades2)
+t.test(bio2018$Aut_support~bio2018$Grades2)
+t.test(bio2018$Extrinsic_asp~bio2018$Grades2)
+t.test(bio2018$Intrinsic_asp~bio2018$Grades2)
+
+#Gender (testing if gender differ significantly across any of the study variables)
+t.test(bio2018$Grades~bio2018$Gender)
+t.test(bio2018$Sub_vitality~bio2018$Gender)
+t.test(bio2018$Dropout_int~bio2018$Gender)
+t.test(bio2018$Perc_Comp~bio2018$Gender) # Males has significantly higher PC than females
+t.test(bio2018$Aut_motivation~bio2018$Gender)
+t.test(bio2018$Con_motivation~bio2018$Gender)
+t.test(bio2018$Aut_support~bio2018$Gender)
+t.test(bio2018$Extrinsic_asp~bio2018$Gender)
+t.test(bio2018$Intrinsic_asp~bio2018$Gender) # Females has significantly higher IA than males
+
+#Level (testing if level differ significantly across any of the study variables)
+t.test(bio2018$Grades~bio2018$level_university) # Master students has significantly higher grades
+t.test(bio2018$Sub_vitality~bio2018$level_university)
+t.test(bio2018$Dropout_int~bio2018$level_university)
+t.test(bio2018$Perc_Comp~bio2018$level_university) # Master students has significantly higher perceived competence
+t.test(bio2018$Aut_motivation~bio2018$level_university)
+t.test(bio2018$Con_motivation~bio2018$level_university)
+t.test(bio2018$Aut_support~bio2018$level_university) # Master students has higher perceived autonomy support at p< .10
+t.test(bio2018$Extrinsic_asp~bio2018$level_university)
+t.test(bio2018$Intrinsic_asp~bio2018$level_university)
+
+#--Correlation
+corr_variables <- data.frame(bio2018$Aut_support, bio2018$Intrinsic_asp, bio2018$Extrinsic_asp,
+                             bio2018$Perc_Comp, bio2018$Aut_motivation2, bio2018$Con_motivation, 
+                             bio2018$Dropout_int, bio2018$Sub_vitality, bio2018$Grades)
+corr.test(corr_variables)
+
+#-Create APA table
+library(apaTables)
+library(summarytools)
+
+apa.cor.table(corr_variables, filename = "Table1.doc", table.number = 1,
+              show.conf.interval = TRUE, landscape = TRUE)
+
+describe_N <- data.frame(bio2018$Aut_support,bio2018$Intrinsic_asp, bio2018$Extrinsic_asp, bio2018$Perc_Comp,
+                         bio2018$Aut_motivation2, bio2018$Con_motivation, bio2018$Sub_vitality, bio2018$Dropout_int)
+
+dfSummary(describe_N)
+
+#-------CFA####
+library(lavaan)
+library(semPlot)
+
+#--Specify CFA models
+
+#-Autonomy support
+CFA_AS <- "
+AS =~ AS1 + AS2 + AS3 + AS4 + AS5 + AS6
+"
+fit_AS_CFA <- cfa(model = CFA_AS, data = bio2018, missing="ML") 
+summary(fit_AS_CFA, standardized = TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE)
+fitmeasures(fit_AS_CFA)
+semPaths(fit_AS_CFA, what= "std")
+
+#-Intrinsic aspiration
+CFA_IA <- "
+IA =~ IA1 + IA2 + IA3
+"
+fit_IA_CFA <- cfa(model = CFA_IA, data = bio2018, missing="ML") 
+summary(fit_IA_CFA, standardized = TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE)
+fitmeasures(fit_IA_CFA)
+semPaths(fit_IA_CFA, what= "std")
+
+#-Extrinsic aspiration
+CFA_EX <- "
+EA =~ EA1 + EA2 + EA3
+"
+fit_EA_CFA <- cfa(model = CFA_EX, data = bio2018, missing="ML") 
+summary(fit_EA_CFA, standardized = TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE)
+
+semPaths(fit_EA_CFA, what= "std")
+fitmeasures(fit_EA_CFA)
+
+#-Perceived competence
+CFA_PC <- "
+PC =~ PC1 + PC2 + PC3 + PC4
+"
+fit_PC_CFA <- cfa(model = CFA_PC, data = bio2018, missing="ML") 
+summary(fit_PC_CFA, standardized = TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE)
+fitmeasures(fit_PC_CFA)
+semPaths(fit_PC_CFA, what= "std")
+
+#-Autonomous motivation
+CFA_Autmot <- "
+Autmot =~ Aut1 + Aut2 + Aut3 + Aut4 + Aut5 + Aut6
+"
+fit_Autmot_CFA <- cfa(model = CFA_Autmot, data = bio2018, missing="ML") 
+summary(fit_Autmot_CFA, standardized = TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE)
+semPaths(fit_Autmot_CFA, what= "std",  nCharNodes=0, nCharEdges=0)
+
+#-Autonomous motivation minus indicator Aut4
+CFA_Autmot2 <- "
+Autmot =~ Aut1 + Aut2 + Aut3 + Aut5 + Aut6
+"
+fit_Autmot_CFA2 <- cfa(model = CFA_Autmot2, data = bio2018, missing="ML") 
+summary(fit_Autmot_CFA2, standardized = TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE)
+fitmeasures(fit_Autmot_CFA2)
+semPaths(fit_Autmot_CFA2, what= "std",  nCharNodes=0, nCharEdges=0)
+
+#Compare the autonomous motivation
+lavTestLRT(fit_Autmot_CFA, fit_Autmot_CFA2, type = "Chisq", model.names = NULL) 
+cbind(model1=inspect(fit_Autmot_CFA, 'fit.measures'), model2=inspect(fit_Autmot_CFA2, 'fit.measures')) #Compare fit measures 
+
+#-Controlled motivation
+CFA_Conmot <- "
+Conmot =~ Con1 + Con2 + Con3 + Con4 + Con5 + Con6
+"
+fit_Conmot_CFA <- cfa(model = CFA_Conmot, data = bio2018, missing="ML") 
+summary(fit_Conmot_CFA, standardized = TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE)
+semPaths(fit_Conmot_CFA, what= "std")
+inspect(fit_Conmot_CFA, what="fit")
+
+#Checking modification indiced for controlled motivation
+mod_ind_conmot <- modificationindices(fit_Conmot_CFA)
+head(mod_ind_conmot[order(mod_ind_conmot$mi, decreasing=TRUE), ], 20)
+
+#-Controlled motivation modified, correlate two items
+CFA_Conmot2 <- "
+Conmot =~ Con1 + Con2 + Con3 + Con4 + Con5 + Con6
+Con5 ~~ Con6
+"
+fit_Conmot2_CFA <- cfa(model = CFA_Conmot2, data = bio2018, missing="ML") 
+summary(fit_Conmot2_CFA, standardized = TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE)
+semPaths(fit_Conmot2_CFA, what= "std")
+inspect(fit_Conmot2_CFA, what="fit")
+
+#Compare the controlled motivation
+lavTestLRT(fit_Conmot_CFA, fit_Conmot2_CFA, type = "Chisq", model.names = NULL) #Chi-square test
+cbind(model1=inspect(fit_Conmot_CFA, 'fit.measures'), model2=inspect(fit_Conmot2_CFA, 'fit.measures')) #Compare fit measures 
+
+#--Subjective vitality
+CFA_Subvitality <- "
+subvitality =~ SVS1 + SVS2 + SVS3
+"
+fit_Subvitality_CFA <- cfa(model = CFA_Subvitality, data = bio2018, missing="ML") 
+summary(fit_Subvitality_CFA, standardized = TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE)
+fitmeasures(fit_Subvitality_CFA)
+semPaths(fit_Subvitality_CFA, what= "std")
+
+#--Dropout intentions
+CFA_Dropout <- "
+Dropout =~ Intention1 + Intention2_REV + Intention3
+"
+fit_Dropout_CFA <- cfa(model = CFA_Dropout, data = bio2018, missing="ML") 
+summary(fit_Dropout_CFA, standardized = TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE)
+fitmeasures(fit_Dropout_CFA)
+semPaths(fit_Dropout_CFA, what= "std")
+
+#--Measurement model
+measurementmodel1 <- "
+AS =~ AS1 + AS2 + AS3 + AS4 + AS5 + AS6
+IA =~ IA1 + IA2 + IA3
+EA =~ EA1 + EA2 + EA3
+PC =~ PC1 + PC2 + PC3 + PC4
+Autmot =~ Aut1 + Aut2 + Aut3 + Aut4 + Aut5 + Aut6
+Conmot =~ Con1 + Con2 + Con3 + Con4 + Con5 + Con6
+subvitality =~ SVS1 + SVS2 + SVS3
+Dropout =~ Intention1 + Intention2_REV + Intention3
+"
+fit_measurementmodel1 <- cfa(model= measurementmodel1, data = bio2018, missing="ml")
+fitmeasures(fit_measurementmodel1)
+summary(fit_measurementmodel1, standardized=TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE, rsq = TRUE)
+semPaths(fit_measurementmodel1, what= "std")
+
+#-------SEM####
+library(lavaan)
+library(semPlot)
+library(parameters)
+
+#--Indirect effects model
+indirect0 <- "
+# Measurement model
+AS =~ AS1 + AS2 + AS3 + AS4 + AS5 + AS6
+IA =~ IA1 + IA2 + IA3
+EA =~ EA1 + EA2 + EA3
+PC =~ PC1 + PC2 + PC3 + PC4
+Autmot =~ Aut1 + Aut2 + Aut3 + Aut4 + Aut5 + Aut6
+Conmot =~ Con1 + Con2 + Con3 + Con4 + Con5 + Con6
+subvitality =~ SVS1 + SVS2 + SVS3
+Dropout =~ Intention1 + Intention2_REV + Intention3
+
+# Regressions (covariations)
+AS ~~ IA
+AS ~~ EA
+IA ~~ EA
+
+# Regressions (mediators)
+PC ~ a*AS + d*IA + g*EA
+Autmot ~ b*AS + e*IA
+Conmot ~ c*AS + i*EA
+
+# Regressions (Outcomes)
+Grades ~ j*PC + m*Autmot + p*Conmot
+subvitality ~ k*PC + n*Autmot + q*Conmot
+Dropout ~ l*PC + o*Autmot + r*Conmot
+
+#Indirect effect
+indirect1:= a*j #aut.supp->PC->Ach
+indirect2:= a*k
+indirect3:= a*l
+indirect4:= b*m
+indirect5:= b*n
+indirect6:= b*o
+indirect7:= e*m
+indirect8:= e*n
+indirect9:= e*o
+indirect10:= g*j
+indirect11:= g*k
+indirect12:= g*l
+indirect13:= i*p
+indirect14:= i*q
+indirect15:= i*r
+"
+#--Analyzing indirect effects model
+indirect_fullmodel0 <- sem(indirect0, data=bio2018, missing = "ML")
+summary(indirect_fullmodel0, standardized=TRUE, estimates = TRUE, header = TRUE, ci = TRUE, fit.measures = TRUE, rsq = TRUE)
+fitmeasures(indirect_fullmodel0)
+
+#--Viewing model visually
+semPaths(indirect_fullmodel0, what= "std", curvePivot = TRUE, layout = "tree3", rotation = 2,  nCharNodes=0, nCharEdges=0,
+         style ="lisrel",edge.label.cex = .5, edge.color = "black")
+
+#Checking modification indices
+modificationindices(indirect_fullmodel0, sort. = T)
+
+#--Indirect effects model revised after modification indices
+indirect1 <- "
+# Measurement model
+AS =~ AS1 + AS2 + AS3 + AS4 + AS5 + AS6
+IA =~ IA1 + IA2 + IA3
+EA =~ EA1 + EA2 + EA3
+PC =~ PC1 + PC2 + PC3 + PC4
+Autmot =~ Aut1 + Aut2 + Aut3 + Aut5 + Aut6
+Conmot =~ Con1 + Con2 + Con3 + Con4 + Con5 + Con6
+Con5 ~~ Con6
+subvitality =~ SVS1 + SVS2 + SVS3
+Dropout =~ Intention1 + Intention2_REV + Intention3
+
+# Regressions (covariations)
+AS ~~ IA
+AS ~~ EA
+IA ~~ EA
+
+# Regressions (mediators)
+PC ~ a*AS + d*IA + g*EA
+Autmot ~ b*AS + e*IA
+Conmot ~ c*AS + i*EA
+
+# Regressions (Outcomes)
+Grades ~ j*PC + m*Autmot + p*Conmot
+subvitality ~ k*PC + n*Autmot + q*Conmot
+Dropout ~ l*PC + o*Autmot + r*Conmot
+
+
+#Indirect effect
+indirect1:= a*j 
+indirect2:= a*k
+indirect3:= a*l
+indirect4:= b*m
+indirect5:= b*n
+indirect6:= b*o
+indirect7:= e*m
+indirect8:= e*n
+indirect9:= e*o
+indirect10:= g*j
+indirect11:= g*k
+indirect12:= g*l
+indirect13:= i*p
+indirect14:= i*q
+indirect15:= i*r
+"
+#--Analyzing indirect effects model
+indirect_fullmodel1 <- sem(indirect1, data=bio2018, missing = "ML")
+summary(indirect_fullmodel1, standardized=TRUE, estimates = TRUE, header = TRUE, fit.measures = TRUE, rsq = TRUE, ci = TRUE)
+fitmeasures(indirect_fullmodel1)
+model_parameters(indirect_fullmodel1, standardized = T, ci = 0.95)
+
+#--Viewing model visually
+semPaths(indirect_fullmodel1, what= "std", curvePivot = TRUE, layout = "tree3", rotation = 2,  nCharNodes=0, nCharEdges=0,
+         style ="lisrel",edge.label.cex = .5, edge.color = "black")
+
+#Comparing models
+lavTestLRT(indirect_fullmodel0, indirect_fullmodel1, type = "Chisq", model.names = NULL) #Chi-square test
+
+cbind(model1=inspect(indirect_fullmodel0, 'fit.measures'), model2=inspect(indirect_fullmodel1, 'fit.measures')) #Compare fit measures 
